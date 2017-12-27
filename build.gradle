@@ -1,5 +1,33 @@
 version = new ProjectVersion(0,1)
 
+ext.versionFile = file 'version.properties'
+
+task loadVersion(){
+	project.version = readVersion()
+}
+
+ProjectVersion readVersion(){
+
+	logger.quiet 'Reading version file'
+	
+	if (!versionFile.exists()){
+		throw new GradleException("Required version file does not exists: $versionFile.canonicalPath")
+	}
+	
+	Properties versionProps = new Properties()
+	
+	versionFile.withInputStream { stream ->
+		versionProps.load(stream)
+	}
+	
+	new ProjectVersion(
+		versionProps.major.toInteger(),
+		versionProps.minor.toInteger(),
+		versionProps.release.toBoolean()
+	)
+}
+
+
 task first {
 	doFirst{
 		println "first"
