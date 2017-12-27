@@ -27,6 +27,28 @@ ProjectVersion readVersion(){
 	)
 }
 
+task makeReleaseVersion(group: 'Version', description: 'Makes project a release version'){
+	inputs.property ('release', version.release)
+	outputs.file (versionFile)
+	
+	doLast{
+		version.release = true
+		
+		ant.propertyfile(file: versionFile){
+			entry(key: 'release', type: 'string', operation: '=', value: 'true')
+		}
+	}
+}
+
+task makeSnapshotVersion(group: 'Version', description: 'Makes project a snapshot version'){
+	doLast{
+		version.release = false;
+		
+		ant.propertyfile(file: versionFile){
+			entry(key: 'release', type: 'string', operation: '=', value: 'false')
+		}
+	}
+}
 
 task first {
 	doFirst{
@@ -74,4 +96,27 @@ class ProjectVersion{
 	String toString(){
 		"$major.$minor.${release? 'RELEASE' : 'SNAPSHOT'}"
 	}
+}
+
+class ReleaseVersionTask extends DefaultTask{
+	@Input Boolean release
+	@OutputFile File destFile
+	
+	ReleaseVersionTask(){	
+		group: 'Version'
+		description: 'Changes project version'
+	}
+	
+	@TaskAction
+	void start(){
+		project.version.release = true
+		ant.propertyfile(file: project.versionFile){
+			entry(key: 'release', type: 'string', operation: '=', value: 'true')
+		}
+	}
+}
+
+task makeReleaseVersion2(type: ReleaseVersionTask){
+	release = project.version.release
+	destFile = project.versionFile 
 }
