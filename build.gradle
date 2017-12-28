@@ -6,6 +6,8 @@ task loadVersion(){
 	project.version = readVersion()
 }
 
+apply plugin: 'war'
+
 ProjectVersion readVersion(){
 
 	logger.quiet 'Reading version file'
@@ -120,3 +122,52 @@ task makeReleaseVersion2(type: ReleaseVersionTask){
 	release = project.version.release
 	destFile = project.versionFile 
 }
+
+task createDistribution(type: Zip, dependsOn: makeReleaseVersion){
+	from war.outputs.files
+	from (sourceSets*.allSource){
+		into 'src'
+	}
+	from (rootDir){
+		include versionFile.name
+	}
+}
+
+task backupDistribution(type: Copy){
+	from createDistribution.outputs.files
+	into "$buildDir/backup"
+}
+
+tasks.addRule ("Pattern: increment|decrement<Classifier>Version - increments the project version" ) {
+     String taskname -> 
+		if((taskname.startsWith("increment") || taskname.startsWith("decrement") ) && taskname.endsWith("Version")) {
+			task(taskname) {
+				doLast{
+				
+				    Integer adding = taskname.startsWith("increment") ? 1 : -1
+				
+					String classifier = (taskname - 'increment' - 'decrement' - 'Version')
+					String currentVersion = version.toString()
+					switch(classifier){
+						case 'Major': version.major += adding
+							ant.propertyfile(file: versionFile){
+							entry(key: 'major', type: 'string', operation: '=', value: version.major)
+							}
+
+										break
+						case 'Minor': version.minor += adding
+							ant.propertyfile(file: versionFile){
+							entry(key: 'minor', type: 'string', operation: '=', value: version.minor)
+							}
+										break
+						default:
+							throw new GradleException("Classifier must be 'Major' or 'Minor'")
+					}
+					
+					String newVersion = version.toString()
+					logger.quiet "Modifying version from ${currentVersion} to ${newVersion}"
+				}
+			}
+		}
+}
+							   
